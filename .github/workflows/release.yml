@@ -1,0 +1,55 @@
+name: Publish RPMs
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  publish_rpm:
+
+    name: Publish RPM [${{ matrix.osnick }}] Feed
+    runs-on: ubuntu-latest
+    container: oraclelinux:8
+    strategy:
+      matrix:
+        osnick: [rhel7, rhel8]
+        arch: [x86_64]
+    steps:
+      - name: get version from tag
+        id: get_tag_version
+        run: |
+          realversion="${GITHUB_REF/refs\/tags\//}"
+          echo "::set-output name=VERSION::$realversion"
+
+      - name: install dependencies
+        run: |
+          dnf install -y epel-release python39 python39-pip createrepo git tar
+      - uses: actions/checkout@v2
+        with:
+          repository: redis-stack/redis-stack
+          ref: ${{steps.get_tag_version.outputs.VERSION}}
+      - name: get package version
+        id: get_version
+        run: |
+          pip3 install poetry s3cmd
+          ln -s /usr/bin/python3 /usr/bin/python
+          poetry config virtualenvs.create false
+          poetry install
+          realversion=`invoke version -p redis-stack-server -d true`
+          echo "::set-output name=VERSION::$realversion"
+
+      - name: get files from s3
+        run: |
+          s3cmd --access_key=${{secrets.PACKAGES_AWS_ACCESS_KEY_ID}} --secret_key=${{secrets.PACKAGES_AWS_SECRET_ACCESS_KEY}} \
+            sync s3://${{ env.s3publicreponame }}/rpm/${{matrix.osnick}}/ s3uploads/
+          mkdir -p s3uploads/${{ matrix.arch }}
+          cd s3uploads/${{matrix.arch}}
+          s3cmd --access_key=${{secrets.AWS_ACCESS_KEY_ID}} --secret_key=${{secrets.AWS_SECRET_ACCESS_KEY}} \
+            get --force ${{env.s3root}}/*${{ steps.get_version.outputs.VERSION }}*${{ matrix.osnick }}*${{ matrix.arch }}.rpm .
+
+      - name: update packages and publish upstream
+        run: |
+          createrepo --update s3uploads/
+          s3cmd --access_key=${{secrets.PACKAGES_AWS_ACCESS_KEY_ID}} --secret_key=${{secrets.PACKAGES_AWS_SECRET_ACCESS_KEY}} \
+            sync s3uploads/* s3://${{ env.s3publicreponame }}/rpm/${{ matrix.osnick }}/
