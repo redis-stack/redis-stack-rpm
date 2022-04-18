@@ -5,6 +5,17 @@ on:
     tags:
       - '*'
 
+env:
+  pythonversion: 3.9
+  rubyversion: 2.7.2
+
+  # Path to the S3 bucket containing our pre-build packages
+  s3root: s3://redismodules/redis-stack
+
+  # Name of the s3 bucket within the account, used to publish our feeds
+  # eg: redismodules
+  s3publicreponame: packages.redis.io
+
 jobs:
   publish_rpm:
 
