@@ -28,7 +28,7 @@ jobs:
         arch: [x86_64]
     steps:
       - name: get version from tag
-        id: get_tag_version
+        id: get_version
         run: |
           realversion="${GITHUB_REF/refs\/tags\//}"
           echo "::set-output name=VERSION::$realversion"
@@ -36,20 +36,6 @@ jobs:
       - name: install dependencies
         run: |
           dnf install -y epel-release python39 python39-pip createrepo git tar
-      - uses: actions/checkout@v2
-        with:
-          repository: redis-stack/redis-stack
-          ref: ${{steps.get_tag_version.outputs.VERSION}}
-      - name: get package version
-        id: get_version
-        run: |
-          pip3 install poetry s3cmd
-          ln -s /usr/bin/python3 /usr/bin/python
-          poetry config virtualenvs.create false
-          poetry install
-          realversion=`invoke version -p redis-stack-server -d true`
-          echo "::set-output name=VERSION::$realversion"
-
       - name: get files from s3
         run: |
           s3cmd --access_key=${{secrets.PACKAGES_AWS_ACCESS_KEY_ID}} --secret_key=${{secrets.PACKAGES_AWS_SECRET_ACCESS_KEY}} \
