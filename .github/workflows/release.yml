@@ -38,7 +38,7 @@ jobs:
           dnf install -y epel-release python39 python39-pip createrepo git tar
       - name: install s3cmd
         run: |
-          pip install s3cmd
+          pip3 install s3cmd
       - name: get files from s3
         run: |
           s3cmd --access_key=${{secrets.PACKAGES_AWS_ACCESS_KEY_ID}} --secret_key=${{secrets.PACKAGES_AWS_SECRET_ACCESS_KEY}} \
