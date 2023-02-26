@@ -24,7 +24,7 @@ jobs:
     container: oraclelinux:8
     strategy:
       matrix:
-        osnick: [rhel7, rhel8]
+        osnick: [rhel7, rhel8, amzn2]
         arch: [x86_64]
     steps:
       - name: get version from tag
